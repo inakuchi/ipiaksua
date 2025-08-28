@@ -122,6 +122,7 @@ const GeneratorView: React.FC<{
               <PublishIcon />
               {isPublishing ? 'Publicando...' : 'Publicar'}
             </button>
+            {/* Botón de descarga temporalmente oculto
             <button
               onClick={handleDownload}
               className={`flex items-center justify-center ${currentTheme.accentBg} text-white font-bold py-2 px-6 rounded-lg ${currentTheme.accentBgHover} transition-all duration-200 ease-in-out hover:scale-105 hover:brightness-110 shadow-md`}
@@ -129,6 +130,7 @@ const GeneratorView: React.FC<{
               <DownloadIcon />
               Descargar SVG
             </button>
+            */}
           </div>
         </div>
       ) : (
