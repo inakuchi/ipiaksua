@@ -1,0 +1,5 @@
+{
+  "name": "Ipiak&Sua Avatar Generator",
+  "description": "A minimalist web application that generates unique, deterministic, earth-toned avatars from a user ID string.",
+  "requestFramePermissions": []
+}
