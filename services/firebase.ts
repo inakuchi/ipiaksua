@@ -6,7 +6,7 @@ import "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyChC1JPJnC0h0tisSslfWu-uRTq-AfwCag",
+   apiKey: process.env.VITE_FIREBASE_API_KEY as string,
     authDomain: "ipiaksua-bf287.firebaseapp.com",
     projectId: "ipiaksua-bf287",
     storageBucket: "ipiaksua-bf287.firebasestorage.app",
