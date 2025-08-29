@@ -1,11 +1,10 @@
-
-
 import React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import { generateDeterministicAvatar, Theme } from './services/avatarGenerator';
 import { db } from './services/firebase';
-// FIX: Replaced Firebase v9 modular imports with a namespace import for v8 compatibility.
-import firebase from "firebase/app";
+// Using Firebase v9+ modular imports
+import { getApp } from "firebase/app";
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "firebase/firestore";
 
 const DownloadIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -14,7 +13,7 @@ const DownloadIcon = () => (
 );
 
 const PublishIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http:zz//www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
     </svg>
 );
@@ -154,11 +153,10 @@ const GalleryView: React.FC<{
             setIsLoading(true);
             setError(null);
             try {
-                // FIX: Updated Firestore query to use Firebase v8 syntax.
-                const creationsCol = db.collection('creations');
-                const q = creationsCol.orderBy('createdAt', 'desc').limit(50);
-                const snapshot = await q.get();
-                const creationsList = snapshot.docs.map(doc => {
+                const creationsRef = collection(db, 'creations');
+                const q = query(creationsRef, orderBy('createdAt', 'desc'), limit(50));
+                const querySnapshot = await getDocs(q);
+                const creationsList = querySnapshot.docs.map(doc => {
                     const data = doc.data();
                     return {
                         id: doc.id,
@@ -261,11 +259,10 @@ const App: React.FC = () => {
     }
     setIsPublishing(true);
     try {
-      // FIX: Updated Firestore document creation to use Firebase v8 syntax.
-      await db.collection("creations").add({
+      await addDoc(collection(db, "creations"), {
         seed: userId,
         theme: theme,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+        createdAt: serverTimestamp()
       });
       alert('¡Publicado con éxito!');
       setCurrentView('gallery'); // Switch to gallery after successful publish

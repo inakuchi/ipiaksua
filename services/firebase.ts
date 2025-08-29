@@ -1,8 +1,5 @@
-// FIX: Reverted to Firebase v8 compatibility syntax to resolve module import error.
-// The error 'Module "firebase/app" has no exported member "initializeApp"' indicates
-// that the installed Firebase version is likely v8, not v9+.
-import firebase from "firebase/app";
-import "firebase/firestore";
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,7 +13,7 @@ const firebaseConfig = {
   };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 // Initialize Cloud Firestore and get a reference to the service
-export const db = firebase.firestore();
+export const db = getFirestore(app);
