@@ -21,6 +21,8 @@
     "vite": "^4.5.14"
   },
   "dependencies": {
-    "@firebase/firestore": "^4.9.1"
+    "@firebase/firestore": "^4.9.1",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^4.1.12"
   }
 }
