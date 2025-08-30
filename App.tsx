@@ -1,14 +1,15 @@
+
+
 import React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import { generateDeterministicAvatar, Theme } from './services/avatarGenerator';
-import { db } from './services/firebase';
-// Using Firebase v9+ modular imports
-import { getApp } from "firebase/app";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { db, auth } from './services/firebase';
+import { signInAnonymously } from "firebase/auth";
+import firebase from "firebase/app";
 
 const DownloadIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 1  10 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
   </svg>
 );
 
@@ -19,7 +20,7 @@ const PublishIcon = () => (
 );
 
 
-type View = 'generator' | 'gallery' | 'how';
+type View = 'generator' | 'gallery';
 
 interface Creation {
   id: string;
@@ -27,7 +28,7 @@ interface Creation {
   theme: Theme;
 }
 
-const AVATAR_SIZE = 400;
+const AVATAR_SIZE = 320;
 
 const themeConfig = {
   ipiak: {
@@ -68,7 +69,6 @@ const generateAvatarDataUrlWithoutClip = (userId: string, size: number = 200, an
   return `data:image/svg+xml,${encoded}`;
 }
 
-
 const GeneratorView: React.FC<{
   userId: string;
   setUserId: (id: string) => void;
@@ -80,85 +80,65 @@ const GeneratorView: React.FC<{
   setTheme: (theme: Theme) => void;
   currentTheme: typeof themeConfig.ipiak;
 }> = ({ userId, setUserId, avatarSvgString, handleDownload, handlePublish, isPublishing, theme, setTheme, currentTheme }) => (
-    <div className="w-full flex-1 flex flex-col">
-
-      {/* Avatar display area - constrained height */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        {avatarSvgString ? (
-          <div 
-            className="w-full aspect-square shadow-lg transition-transform duration-300 ease-in-out hover:scale-[1.02] cursor-pointer"
-            style={{ maxWidth: '400px', maxHeight: '400x' }}
-            dangerouslySetInnerHTML={{ __html: avatarSvgString }} 
-          />
-        ) : (
-          <div 
-            className="w-full aspect-square flex items-center justify-center text-stone-500 border-2 border-dashed border-stone-700 rounded-full"
-            style={{ maxWidth: '400px', maxHeight: '400px' }}
-          >
-            <p className="text-center">Introduce un texto<br />para generar</p>
-          </div>
-        )}
+    <main className="w-full max-w-md flex flex-col items-center pt-8">
+      <h1 className="text-6xl font-bold text-stone-200" style={{fontFamily: 'serif'}}>
+        Ipiak&Sua
+      </h1>
+      <input
+        type="text"
+        id="userId"
+        value={userId}
+        onChange={(e) => setUserId(e.target.value)}
+        placeholder="Escribe algo..."
+        className={`w-full bg-stone-800 text-white text-center rounded-lg px-4 py-3 mt-8 border border-stone-700 focus:outline-none focus:ring-2 ${currentTheme.accentRing} transition-all duration-300`}
+      />
+      
+      <div className="flex items-center space-x-2 mt-6 p-1 bg-stone-800 border border-stone-700 rounded-lg">
+        <button 
+          onClick={() => setTheme('ipiak')}
+          className={`px-6 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${theme === 'ipiak' ? `${themeConfig.ipiak.themeSelectorBg} text-white shadow` : 'text-stone-400 hover:bg-stone-700'}`}>
+          Ipiak
+        </button>
+        <button 
+          onClick={() => setTheme('sua')}
+          className={`px-6 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${theme === 'sua' ? `${themeConfig.sua.themeSelectorBg} text-white shadow` : 'text-stone-400 hover:bg-stone-700'}`}>
+          Sua
+        </button>
       </div>
 
-      {/* Bottom controls - responsive layout */}
-      <div className="flex justify-center flex-shrink-0 px-4 mb-6">
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full max-w-2xl">
-          {/* Top row on mobile: Input field */}
-          <input
-            type="text"
-            id="userId"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="Escribe algo..."
-            className={`w-full sm:w-64 bg-stone-800 text-white text-center rounded-lg px-3 py-2 text-sm border border-stone-700 focus:outline-none focus:ring-2 ${currentTheme.accentRing} transition-all duration-300`}
+      {avatarSvgString ? (
+        <div className="mt-6 flex flex-col items-center w-full">
+          <div 
+              className="w-full aspect-square shadow-lg transition-transform duration-300 ease-in-out hover:scale-[1.02] cursor-pointer"
+              style={{ maxWidth: `${AVATAR_SIZE}px` }}
+              dangerouslySetInnerHTML={{ __html: avatarSvgString }} 
           />
-          
-          {/* Bottom row on mobile: Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Theme selector */}
-            <div className="flex items-center space-x-1 p-1 bg-stone-800 border border-stone-700 rounded-lg">
-              <button 
-                onClick={() => setTheme('ipiak')}
-                className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-colors duration-300 ${theme === 'ipiak' ? `${themeConfig.ipiak.themeSelectorBg} text-white shadow` : 'text-stone-400 hover:bg-stone-700'}`}>
-                Ipiak
-              </button>
-              <button 
-                onClick={() => setTheme('sua')}
-                className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-colors duration-300 ${theme === 'sua' ? `${themeConfig.sua.themeSelectorBg} text-white shadow` : 'text-stone-400 hover:bg-stone-700'}`}>
-                Sua
-              </button>
-            </div>
-
-            {/* Animation toggle */}
-            <label htmlFor="animation-toggle" className="flex items-center cursor-pointer group">
-              <div className="relative">
-                <input type="checkbox" id="animation-toggle" className="sr-only" />
-                <div className="block bg-stone-700 w-10 h-5 rounded-full group-hover:bg-stone-600 transition-colors duration-300"></div>
-                <div className="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform"></div>
-              </div>
-              <div className="ml-2 text-stone-300 text-xs hidden sm:block">Anim</div>
-            </label>
-
-            {/* Publish button */}
+          <div className="flex space-x-4 mt-8">
             <button
               onClick={handlePublish}
-              disabled={isPublishing || !userId.trim()}
-              className={`flex items-center justify-center bg-stone-700 text-white font-medium py-2 px-3 sm:px-4 text-sm rounded-lg hover:bg-stone-600 transition-all duration-200 ease-in-out hover:scale-105 hover:brightness-110 shadow-md disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={isPublishing}
+              className={`flex items-center justify-center bg-stone-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-stone-600 transition-all duration-200 ease-in-out hover:scale-105 hover:brightness-110 shadow-md disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <PublishIcon />
-              <span className="hidden sm:inline ml-1">{isPublishing ? 'Publicando...' : 'Publicar'}</span>
+              {isPublishing ? 'Publicando...' : 'Publicar'}
             </button>
+            {/* Botón de descarga temporalmente oculto
+            <button
+              onClick={handleDownload}
+              className={`flex items-center justify-center ${currentTheme.accentBg} text-white font-bold py-2 px-6 rounded-lg ${currentTheme.accentBgHover} transition-all duration-200 ease-in-out hover:scale-105 hover:brightness-110 shadow-md`}
+            >
+              <DownloadIcon />
+              Descargar SVG
+            </button>
+            */}
           </div>
         </div>
-      </div>
-      
-      <style>{`
-        input:checked ~ .dot {
-          transform: translateX(20px);
-          background-color: ${currentTheme.switchColor};
-        }
-      `}</style>
-    </div>
+      ) : (
+        <div className="w-64 h-64 flex items-center justify-center text-stone-500 mt-8">
+          <p>Introduce un texto para generar.</p>
+        </div>
+      )}
+    </main>
 );
 
 const GalleryView: React.FC<{
@@ -174,10 +154,11 @@ const GalleryView: React.FC<{
             setIsLoading(true);
             setError(null);
             try {
-                const creationsRef = collection(db, 'creations');
-                const q = query(creationsRef, orderBy('createdAt', 'desc'), limit(50));
-                const querySnapshot = await getDocs(q);
-                const creationsList = querySnapshot.docs.map(doc => {
+                // FIX: Updated Firestore query to use Firebase v8 syntax.
+                const creationsCol = db.collection('creations');
+                const q = creationsCol.orderBy('createdAt', 'desc').limit(50);
+                const snapshot = await q.get();
+                const creationsList = snapshot.docs.map(doc => {
                     const data = doc.data();
                     return {
                         id: doc.id,
@@ -280,10 +261,14 @@ const App: React.FC = () => {
     }
     setIsPublishing(true);
     try {
-      await addDoc(collection(db, "creations"), {
+      // Sign in anonymously before publishing
+      await signInAnonymously(auth);
+
+      // FIX: Updated Firestore document creation to use Firebase v8 syntax.
+      await db.collection("creations").add({
         seed: userId,
         theme: theme,
-        createdAt: serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
       });
       alert('¡Publicado con éxito!');
       setCurrentView('gallery'); // Switch to gallery after successful publish
@@ -298,50 +283,38 @@ const App: React.FC = () => {
   return (
     <div 
       style={appStyle}
-      className={`h-screen text-stone-200 font-sans px-4 sm:px-8 pt-4 sm:pt-8 pb-2 sm:pb-4 flex flex-col items-center transition-colors duration-500 overflow-hidden`}
+      className={`min-h-screen text-stone-200 font-sans p-4 sm:p-8 flex flex-col items-center transition-colors duration-500`}
     >
       
+      <div className="fixed top-6 right-6 z-20">
+        <label htmlFor="animation-toggle" className="flex items-center cursor-pointer group">
+            <div className="relative">
+                <input type="checkbox" id="animation-toggle" className="sr-only" checked={isAnimated} onChange={() => setIsAnimated(!isAnimated)} />
+                <div className="block bg-stone-700 w-14 h-8 rounded-full group-hover:bg-stone-600 transition-colors duration-300"></div>
+                <div className="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform"></div>
+            </div>
+            <div className="ml-3 text-stone-300 font-medium hidden sm:block">Animación</div>
+        </label>
+        <style>{`
+            input:checked ~ .dot {
+                transform: translateX(100%);
+                background-color: ${currentTheme.switchColor};
+            }
+        `}</style>
+      </div>
 
-      {/* Header with logo and navigation */}
-      <header className="w-full flex justify-between items-center mb-4">
-        {/* Logo - top left */}
-        <h1 className="text-2xl font-bold text-stone-200 cursor-pointer" 
-            style={{fontFamily: 'serif'}}
-            onClick={() => setCurrentView('generator')}>
-          Ipiak&Sua
-        </h1>
-        
-        {/* Navigation toggle - center */}
-        <div className="flex items-center">
-          {currentView === 'generator' ? (
-            <button 
-              onClick={() => setCurrentView('gallery')}
-              className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg ${currentTheme.accentBg} ${currentTheme.accentBgHover} text-white`}>
-              Galería
-            </button>
-          ) : currentView === 'gallery' ? (
-            <button 
-              onClick={() => setCurrentView('generator')}
-              className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg ${currentTheme.accentBg} ${currentTheme.accentBgHover} text-white`}>
-              Generador
-            </button>
-          ) : (
-            <button 
-              onClick={() => setCurrentView('generator')}
-              className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg ${currentTheme.accentBg} ${currentTheme.accentBgHover} text-white`}>
-              Generador
-            </button>
-          )}
-        </div>
-        
-        {/* How it works - top right */}
+      <nav className="w-full max-w-md flex justify-center border-b border-stone-700 mb-8">
         <button 
-          onClick={() => setCurrentView('how')}
-          className="text-sm text-stone-400 hover:text-stone-200 transition-colors duration-300">
-          ¿Cómo funciona?
+            onClick={() => setCurrentView('generator')} 
+            className={`px-6 py-3 text-lg font-medium transition-all duration-300 border-b-2 ${currentView === 'generator' ? `${currentTheme.accentText} ${currentTheme.accentBorder}` : 'text-stone-400 hover:text-stone-200 border-transparent hover:border-stone-600'}`}>
+            Generador
         </button>
-      </header>
-      <main className="flex-1 w-full flex flex-col items-center">
+        <button 
+            onClick={() => setCurrentView('gallery')}
+            className={`px-6 py-3 text-lg font-medium transition-all duration-300 border-b-2 ${currentView === 'gallery' ? `${currentTheme.accentText} ${currentTheme.accentBorder}` : 'text-stone-400 hover:text-stone-200 border-transparent hover:border-stone-600'}`}>
+            Galería
+        </button>
+      </nav>
 
       {currentView === 'generator' ? (
         <GeneratorView 
@@ -355,42 +328,18 @@ const App: React.FC = () => {
             setTheme={setTheme}
             currentTheme={currentTheme}
         />
-      ) : currentView === 'gallery' ? (
-        <GalleryView 
-          theme={theme} 
-          currentTheme={currentTheme} 
-        />
       ) : (
-        <HowItWorksView />
+        <GalleryView 
+            theme={theme} 
+            currentTheme={currentTheme} 
+        />
       )}
-    </main>
-      {/* Footer */}
-      <footer className="text-center text-stone-500 text-sm leading-none">
+
+      <footer className="mt-16 text-center text-stone-500 text-sm">
         <p>Ipiak&Sua™ by TGOW™</p>
       </footer>
     </div>
   );
 };
-
-
-const HowItWorksView: React.FC = () => (
-  <section className="max-w-3xl w-full mx-auto pt-8 pb-16">
-    <h2 className="text-4xl font-bold text-center mb-8" style={{fontFamily: 'serif'}}>¿Cómo funciona?</h2>
-    <div className="space-y-8 text-stone-300 leading-relaxed">
-      <div>
-        <h3 className="text-2xl font-semibold mb-2 text-white">1. Generador de Avatares</h3>
-        <p>Introduce un texto, selecciona un color y pulsa «Publicar». El generador crea un avatar determinístico: la misma semilla siempre genera el mismo diseño.</p>
-      </div>
-      <div>
-        <h3 className="text-2xl font-semibold mb-2 text-white">2. Galería de Avatares</h3>
-        <p>Descubre los avatares generados por la comunidad en una cuadrícula ordenada y responsive. Cada tarjeta muestra el avatar y su semilla.</p>
-      </div>
-      <div>
-        <h3 className="text-2xl font-semibold mb-2 text-white">3. Comparte y Explora</h3>
-        <p>Cuando publicas, tu avatar se agrega inmediatamente a la galería. Explora, descarga o reutiliza la semilla para recrear cualquier diseño.</p>
-      </div>
-    </div>
-  </section>
-);
 
 export default App;
